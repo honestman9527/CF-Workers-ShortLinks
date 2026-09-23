@@ -60,13 +60,19 @@ function PublicPage() {
   const [url, setUrl] = useState("");
   const [duration, setDuration] = useState<Days>(3);
   const [siteKey, setSiteKey] = useState("");
+  const [configError, setConfigError] = useState(false);
+  const [verificationError, setVerificationError] = useState(false);
   const [token, setToken] = useState("");
   const [resetKey, setResetKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<CreatedLink | null>(null);
   const [copied, setCopied] = useState(false);
-  const onToken = useCallback((value: string) => setToken(value), []);
+  const onToken = useCallback((value: string) => {
+    setToken(value);
+    if (value) setError("");
+  }, []);
+  const onVerificationFailure = useCallback((failed: boolean) => setVerificationError(failed), []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -75,8 +81,11 @@ function PublicPage() {
         if (!response.ok) throw new Error();
         return response.json() as Promise<{ siteKey: string }>;
       })
-      .then((config) => setSiteKey(config.siteKey))
-      .catch((reason) => { if (reason?.name !== "AbortError") setError("页面配置暂时不可用，请稍后刷新。") });
+      .then((config) => {
+        if (!config.siteKey) throw new Error("Missing Turnstile site key");
+        setSiteKey(config.siteKey);
+      })
+      .catch((reason) => { if (reason?.name !== "AbortError") setConfigError(true); });
     return () => controller.abort();
   }, []);
 
@@ -99,6 +108,7 @@ function PublicPage() {
       setError(reason instanceof Error ? reason.message : "请求未能完成，请稍后重试。");
     } finally {
       setLoading(false);
+      setToken("");
       setResetKey((value) => value + 1);
     }
   }
@@ -152,16 +162,31 @@ function PublicPage() {
                 className={`duration-option ${duration === day ? "selected" : ""}`}
                 onClick={() => { setDuration(day); setResult(null); }}
               >
-                <span className="duration-number">{day}</span><span className="duration-unit">天</span>
+                <span className="duration-value"><span className="duration-number">{day}</span><span className="duration-unit">天</span></span>
+                <span className="duration-caption">{day * 24} 小时</span>
               </button>)}
             </div>
             <p className="field-hint">从生成时开始计时，失效后自动清理。</p>
           </fieldset>
 
-          {siteKey && <Turnstile siteKey={siteKey} onToken={onToken} resetKey={resetKey} />}
+          <div className="verification-section">
+            <div className="verification-heading">
+              <span className="field-label">人机验证</span>
+              <span className={`verification-status ${token ? "verified" : configError || verificationError ? "failed" : ""}`} aria-live="polite">
+                {token ? "已完成" : configError ? "暂不可用" : verificationError ? "验证失败" : siteKey ? "等待验证" : "加载中"}
+              </span>
+            </div>
+            {siteKey && !verificationError && <Turnstile siteKey={siteKey} onToken={onToken} onFailure={onVerificationFailure} resetKey={resetKey} />}
+            <p className={`verification-hint ${configError || verificationError ? "failed" : ""}`} role={configError || verificationError ? "alert" : undefined} aria-live="polite">
+              {configError ? "验证服务暂时不可用，请刷新页面重试。" :
+                verificationError ? "人机验证未能完成，请刷新页面重试。" :
+                !siteKey ? "正在加载验证服务…" :
+                  token ? "验证完成，现在可以生成短链接。" : "完成验证后即可生成短链接。"}
+            </p>
+          </div>
           {error && <p role="alert" className="form-error">{error}</p>}
-          <Button type="submit" size="lg" className="create-button" disabled={loading || !siteKey}>
-            {loading ? "正在生成…" : "生成短链接"}
+          <Button type="submit" size="lg" className={`create-button ${loading ? "is-loading" : ""}`} disabled={loading || !siteKey || !token}>
+            {loading ? "正在生成…" : token ? "生成短链接" : "验证后生成短链接"}
           </Button>
         </form>
 

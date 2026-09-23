@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -33,43 +33,44 @@ function loadScript(): Promise<void> {
   return scriptPromise;
 }
 
-export function Turnstile({ siteKey, onToken, resetKey }: {
+export function Turnstile({ siteKey, onToken, onFailure, resetKey }: {
   siteKey: string;
   onToken: (token: string) => void;
+  onFailure: (failed: boolean) => void;
   resetKey: number;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
-  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     loadScript().then(() => {
-      if (!active || !container.current || !window.turnstile) return;
+      if (!active || !container.current) return;
+      if (!window.turnstile) throw new Error("Turnstile did not initialize");
       widgetId.current = window.turnstile.render(container.current, {
         sitekey: siteKey,
         action: "create_link",
-        callback: onToken,
+        callback: (value) => { onFailure(false); onToken(value); },
         "expired-callback": () => onToken(""),
-        "error-callback": () => { onToken(""); setFailed(true); },
+        "error-callback": () => { onToken(""); onFailure(true); },
       });
-    }).catch(() => { if (active) setFailed(true); });
+    }).catch(() => { if (active) onFailure(true); });
     return () => {
       active = false;
       if (widgetId.current && window.turnstile) window.turnstile.remove(widgetId.current);
       widgetId.current = null;
     };
-  }, [siteKey, onToken]);
+  }, [siteKey, onToken, onFailure]);
 
   useEffect(() => {
     if (resetKey > 0 && widgetId.current && window.turnstile) {
       onToken("");
+      onFailure(false);
       window.turnstile.reset(widgetId.current);
     }
-  }, [resetKey, onToken]);
+  }, [resetKey, onToken, onFailure]);
 
   return <div className="turnstile-area">
     <div ref={container} />
-    {failed && <p className="field-error">人机验证未能加载，请刷新页面重试。</p>}
   </div>;
 }
