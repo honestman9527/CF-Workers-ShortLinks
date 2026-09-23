@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolveD1Id } from "./resolve-d1.mjs";
+import { ensureD1Id } from "./resolve-d1.mjs";
 
 const configPath = process.argv[2] ?? new URL("../wrangler.jsonc", import.meta.url);
 const required = (name) => {
@@ -32,10 +32,11 @@ if (siteKey === "1x00000000000000000000AA") {
   throw new Error("TURNSTILE_SITE_KEY 不能使用测试密钥。");
 }
 
-const databaseId = await resolveD1Id({ accountId, apiToken, name: databaseName });
+const database = await ensureD1Id({ accountId, apiToken, name: databaseName });
 config.vars.PUBLIC_ORIGIN = origin;
 config.vars.TURNSTILE_SITE_KEY = siteKey;
 config.d1_databases[0].database_name = databaseName;
-config.d1_databases[0].database_id = databaseId;
+config.d1_databases[0].database_id = database.id;
 config.routes = [{ pattern: url.hostname, custom_domain: true }];
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+console.log(`D1 数据库 ${databaseName} ${database.created ? "已创建" : "已存在"}。`);
