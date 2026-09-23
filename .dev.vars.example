@@ -1,0 +1,5 @@
+# Copy this file to .dev.vars for local development only.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+ACCESS_AUD=local-development
+ACCESS_TEAM_DOMAIN=https://local.cloudflareaccess.com
+LOCAL_ADMIN_BYPASS=true
