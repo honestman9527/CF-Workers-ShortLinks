@@ -43,15 +43,11 @@ describe("D1 name lookup", () => {
     await expect(resolveD1Id({ ...input, fetchImpl })).rejects.toThrow("HTTP 403");
   });
 
-  it("rejects an optional ID that points to a different database", async () => {
+  it("rejects a malformed database ID returned by Cloudflare", async () => {
     const fetchImpl = vi.fn(async () => Response.json({
       success: true,
-      result: [{ name: input.name, uuid: databaseId }],
+      result: [{ name: input.name, uuid: "invalid" }],
     }));
-    await expect(resolveD1Id({
-      ...input,
-      expectedId: "87654321-1234-1234-1234-123456789abc",
-      fetchImpl,
-    })).rejects.toThrow("不一致");
+    await expect(resolveD1Id({ ...input, fetchImpl })).rejects.toThrow("database_id 无效");
   });
 });

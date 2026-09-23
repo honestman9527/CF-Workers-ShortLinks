@@ -1,6 +1,6 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function resolveD1Id({ accountId, apiToken, name, expectedId, fetchImpl = fetch }) {
+export async function resolveD1Id({ accountId, apiToken, name, fetchImpl = fetch }) {
   const matches = [];
 
   for (let page = 1; page <= 100; page += 1) {
@@ -32,9 +32,6 @@ export async function resolveD1Id({ accountId, apiToken, name, expectedId, fetch
   const id = matches[0].uuid;
   if (typeof id !== "string" || !UUID.test(id)) {
     throw new Error("Cloudflare 返回的 D1 database_id 无效。");
-  }
-  if (expectedId && id.toLowerCase() !== expectedId.toLowerCase()) {
-    throw new Error("D1_DATABASE_ID 与 D1_DATABASE_NAME 指向的数据库不一致。");
   }
   return id;
 }

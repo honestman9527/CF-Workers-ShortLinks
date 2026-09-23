@@ -44,14 +44,8 @@ pnpm build
 
 部署前需要一个已接入 Cloudflare 的域名，例如 `s.example.com`。D1、Turnstile 小组件和 Access 应用需先创建；GitHub Actions 不会替你创建这些账户资源。
 
-1. 创建 D1：`pnpm wrangler d1 create shortlived-links`。`wrangler.jsonc` 已设置 `database_name`；手动部署时可将输出的 ID 填入 `database_id`，自动部署则会按名称查询 ID。
-2. 在 `wrangler.jsonc` 中将 `PUBLIC_ORIGIN` 改成 `https://s.example.com`，将 `TURNSTILE_SITE_KEY` 改成真实站点密钥，并添加自定义域名：
-
-   ```jsonc
-   "routes": [{ "pattern": "s.example.com", "custom_domain": true }]
-   ```
-
-   保持 `workers_dev: false`，以免产生未受域名 Access 策略保护的公开入口。短链以 `PUBLIC_ORIGIN` 为准，配置错误时创建接口会拒绝请求。
+1. 创建 D1：`pnpm wrangler d1 create shortlived-links`。默认数据库名来自 `wrangler.jsonc` 的 `database_name`，即 `shortlived-links`。如果使用其他名称，可在部署时设置 `D1_DATABASE_NAME`。部署脚本会按名称查询数据库，无需填写数据库 ID。
+2. 设置 `PUBLIC_ORIGIN` 为自定义域名（如 `https://s.example.com`），并设置正式的 `TURNSTILE_SITE_KEY`。自动部署使用下文的 GitHub Variables；手动部署使用同名环境变量。部署脚本会填写 `wrangler.jsonc` 中的域名、站点密钥和自定义域名路由。保持 `workers_dev: false`，以免产生未受域名 Access 策略保护的公开入口。短链以 `PUBLIC_ORIGIN` 为准，配置错误时创建接口会拒绝请求。
 3. 在 Turnstile 中创建限制到 `s.example.com` 的小组件，保存私有密钥。公开页面使用 `create_link` action，Worker 会验证 action 和 hostname。
 4. 在 Cloudflare Zero Trust 创建 self-hosted Access 应用，路径设置为 `s.example.com/admin*`，Allow 策略仅包含指定管理员邮箱。复制应用的 AUD 与团队域名（如 `https://team.cloudflareaccess.com`）。上线后分别访问 `/admin` 和 `/admin/api/links`，确认两者均被 Access 保护。
 5. 设置 Worker 密钥。`LOCAL_ADMIN_BYPASS` 在生产环境必须设置为 `false`：
@@ -63,7 +57,7 @@ pnpm build
    pnpm wrangler secret put LOCAL_ADMIN_BYPASS
    ```
 
-6. 手动部署需在 `wrangler.jsonc` 填写 D1 ID；暂时移走本地 `.dev.vars`，再执行 `pnpm cf:typegen`、`pnpm db:migrate:remote`、`pnpm deploy`。部署脚本会检查真实域名、D1 ID 和正式 Turnstile 站点密钥。上线后确认公开页生成、短链跳转、后台登录、停用后立即返回 `404`，以及 Cron 正常清理。
+6. 手动部署时，先设置 `PUBLIC_ORIGIN`、`TURNSTILE_SITE_KEY`、`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN` 环境变量；使用其他数据库名时再设置 `D1_DATABASE_NAME`。运行 `node scripts/configure-deploy.mjs`，让脚本按名称解析 D1 并生成部署配置。暂时移走本地 `.dev.vars`，再执行 `pnpm cf:typegen`、`pnpm db:migrate:remote`、`pnpm deploy`。部署脚本会检查真实域名、D1 绑定和正式 Turnstile 站点密钥。上线后确认公开页生成、短链跳转、后台登录、停用后立即返回 `404`，以及 Cron 正常清理。
 
 不要把 `.dev.vars`、真实 Turnstile 私钥或 Access 信息提交到仓库。部署时请使用真实 Turnstile 密钥；Worker 对非本地主机拒绝官方测试站点密钥。
 
@@ -81,11 +75,10 @@ pnpm build
 | Secret | `ACCESS_AUD` | Access 应用的 AUD |
 | Secret | `ACCESS_TEAM_DOMAIN` | 如 `https://team.cloudflareaccess.com` |
 | Variable | `PUBLIC_ORIGIN` | 如 `https://s.example.com`，不要以 `/` 结尾 |
-| Variable | `D1_DATABASE_NAME` | 已创建 D1 数据库的名称，如 `shortlived-links` |
-| Variable（可选） | `D1_DATABASE_ID` | 数据库 UUID；提供时仅用于核对名称解析结果 |
+| Variable（可选） | `D1_DATABASE_NAME` | 已创建 D1 数据库的名称；默认使用 `wrangler.jsonc` 中的 `shortlived-links` |
 | Variable | `TURNSTILE_SITE_KEY` | 正式 Turnstile 站点密钥 |
 
-API Token 可从 Cloudflare 的 **Edit Cloudflare Workers** 模板创建；因为工作流还会查询 D1、执行迁移和首次绑定自定义域名，需补充 D1 写权限和目标 Zone 的 Workers Routes 写权限。尽量只授权本项目使用的账户和 Zone。Account ID 与 API Token 都不写入 `wrangler.jsonc`。工作流会查询名称完全匹配的已有 D1 数据库，把解析出的 UUID 写入临时检出的 Wrangler 配置；查不到或出现重名时会停止，不会自动创建新库。随后通过 `wrangler deploy --secrets-file` 上传 Worker 密钥；`LOCAL_ADMIN_BYPASS` 固定为 `false`。
+API Token 可从 Cloudflare 的 **Edit Cloudflare Workers** 模板创建；因为工作流还会查询 D1、执行迁移和首次绑定自定义域名，需补充 D1 写权限和目标 Zone 的 Workers Routes 写权限。尽量只授权本项目使用的账户和 Zone。Account ID 与 API Token 都不写入 `wrangler.jsonc`。工作流默认查询 `shortlived-links`，设置 `D1_DATABASE_NAME` 时则查询指定名称；它会把匹配数据库的 UUID 写入临时检出的 Wrangler 配置。查不到或出现重名时会停止，不会自动创建新库。随后通过 `wrangler deploy --secrets-file` 上传 Worker 密钥；`LOCAL_ADMIN_BYPASS` 固定为 `false`。
 
 配置完成后，推送到 `master` 即触发自动部署。首次运行后检查 Actions 日志、公开页、短链跳转和 `/admin` 的 Access 登录。缺少任一必填配置时工作流会失败，不会使用仓库中的本地测试值部署。
 

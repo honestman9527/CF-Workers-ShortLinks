@@ -9,12 +9,18 @@ const required = (name) => {
 };
 
 const origin = required("PUBLIC_ORIGIN");
-const databaseName = required("D1_DATABASE_NAME");
-const optionalDatabaseId = process.env.D1_DATABASE_ID?.trim();
 const siteKey = required("TURNSTILE_SITE_KEY");
 const accountId = required("CLOUDFLARE_ACCOUNT_ID");
 const apiToken = required("CLOUDFLARE_API_TOKEN");
 const url = new URL(origin);
+const config = JSON.parse(readFileSync(configPath, "utf8"));
+const configuredName = config.d1_databases?.[0]?.database_name;
+const databaseName = process.env.D1_DATABASE_NAME?.trim()
+  || (typeof configuredName === "string" ? configuredName.trim() : "");
+
+if (!databaseName) {
+  throw new Error("缺少 D1 数据库名称；请在 wrangler.jsonc 中设置 database_name，或设置 D1_DATABASE_NAME。");
+}
 
 if (url.protocol !== "https:" || url.origin !== origin || url.username || url.password || url.port) {
   throw new Error("PUBLIC_ORIGIN 必须是无路径、端口和凭据的 HTTPS 域名。");
@@ -22,15 +28,11 @@ if (url.protocol !== "https:" || url.origin !== origin || url.username || url.pa
 if (!/^[0-9a-f]{32}$/i.test(accountId)) {
   throw new Error("CLOUDFLARE_ACCOUNT_ID 必须是 32 位账户 ID。");
 }
-if (optionalDatabaseId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(optionalDatabaseId)) {
-  throw new Error("可选的 D1_DATABASE_ID 必须是 D1 数据库 UUID。");
-}
 if (siteKey === "1x00000000000000000000AA") {
   throw new Error("TURNSTILE_SITE_KEY 不能使用测试密钥。");
 }
 
-const config = JSON.parse(readFileSync(configPath, "utf8"));
-const databaseId = await resolveD1Id({ accountId, apiToken, name: databaseName, expectedId: optionalDatabaseId });
+const databaseId = await resolveD1Id({ accountId, apiToken, name: databaseName });
 config.vars.PUBLIC_ORIGIN = origin;
 config.vars.TURNSTILE_SITE_KEY = siteKey;
 config.d1_databases[0].database_name = databaseName;
