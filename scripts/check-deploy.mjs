@@ -17,7 +17,7 @@ if (!config.routes?.some((route) => route.pattern === origin.hostname && route.c
   fail("请在 routes 中配置与 PUBLIC_ORIGIN 一致的自定义域名。");
 }
 if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(config.d1_databases?.[0]?.database_id ?? "")) {
-  fail("请填写真实的 D1 database_id。");
+  fail("请先按数据库名称解析真实的 D1 database_id。");
 }
 if (!config.vars.TURNSTILE_SITE_KEY || config.vars.TURNSTILE_SITE_KEY === "1x00000000000000000000AA") {
   fail("请配置正式 Turnstile 站点密钥。");

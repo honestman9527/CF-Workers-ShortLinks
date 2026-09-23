@@ -14,7 +14,6 @@
     {
       "binding": "LINKS_DB",
       "database_name": "shortlived-links",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
       "migrations_dir": "migrations"
     }
   ],
