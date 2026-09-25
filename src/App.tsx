@@ -127,13 +127,14 @@ function PublicPage() {
   return <div className="page-shell">
     <Brand />
     <main className="public-main">
-      <section className="intro" aria-labelledby="page-title">
-        <div className="intro-accent" aria-hidden="true"><Clock3 size={25} /></div>
-        <h1 id="page-title">分享链接，<br />到期自动失效。</h1>
-        <p>把长网址变成短链接。选择保留 1、3 或 7 天，到期后便无法继续打开。</p>
-      </section>
+      <div className="public-layout">
+        <section className="intro" aria-labelledby="page-title">
+          <div className="intro-accent" aria-hidden="true"><Clock3 size={19} /></div>
+          <h1 id="page-title">分享链接，<br className="desktop-break" />到期自动失效。</h1>
+          <p>把长网址变成短链接。选择保留 1、3 或 7 天，到期后便无法继续打开。</p>
+        </section>
 
-      <section className="create-section" aria-label="生成短链接">
+        <section className="create-section" aria-label="生成短链接">
         <form onSubmit={createLink}>
           <div className="field-group">
             <label htmlFor="target-url" className="field-label">要分享的网址</label>
@@ -153,18 +154,22 @@ function PublicPage() {
 
           <fieldset className="duration-fieldset">
             <legend className="field-label">保留多久</legend>
-            <div className="duration-track" role="radiogroup" aria-label="短链有效期">
-              {days.map((day) => <button
+            <div className="duration-track">
+              {days.map((day) => <label
                 key={day}
-                type="button"
-                role="radio"
-                aria-checked={duration === day}
                 className={`duration-option ${duration === day ? "selected" : ""}`}
-                onClick={() => { setDuration(day); setResult(null); }}
               >
+                <input
+                  className="duration-radio"
+                  type="radio"
+                  name="duration"
+                  value={day}
+                  checked={duration === day}
+                  onChange={() => { setDuration(day); setResult(null); }}
+                />
                 <span className="duration-value"><span className="duration-number">{day}</span><span className="duration-unit">天</span></span>
                 <span className="duration-caption">{day * 24} 小时</span>
-              </button>)}
+              </label>)}
             </div>
             <p className="field-hint">从生成时开始计时，失效后自动清理。</p>
           </fieldset>
@@ -200,7 +205,8 @@ function PublicPage() {
           </div>
           <p>有效至 {dateTime(result.expiresAt)}（本地时间）</p>
         </div>}
-      </section>
+        </section>
+      </div>
     </main>
     <footer className="site-footer">临时链接只保留所选天数。请勿用于违法或欺骗性内容。</footer>
   </div>;
@@ -347,8 +353,8 @@ function AdminPage() {
           <AlertDialogDescription>/{deleteTarget?.code} 将立即失效，删除后无法恢复。</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel asChild><Button variant="secondary">取消</Button></AlertDialogCancel>
-          <AlertDialogAction asChild><Button variant="danger" onClick={deleteLink} disabled={!!pending}>删除短链</Button></AlertDialogAction>
+          <AlertDialogCancel variant="secondary">取消</AlertDialogCancel>
+          <AlertDialogAction variant="danger" onClick={deleteLink} disabled={!!pending}>删除短链</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
