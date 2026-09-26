@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ArrowUpRight, Check, Clock3, Copy, Link2, RefreshCw, Search, Trash2 } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Link2, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -128,12 +128,6 @@ function PublicPage() {
     <Brand />
     <main className="public-main">
       <div className="public-layout">
-        <section className="intro" aria-labelledby="page-title">
-          <div className="intro-accent" aria-hidden="true"><Clock3 size={19} /></div>
-          <h1 id="page-title">分享链接，<br className="desktop-break" />到期自动失效。</h1>
-          <p>把长网址变成短链接。选择保留 1、3 或 7 天，到期后便无法继续打开。</p>
-        </section>
-
         <section className="create-section" aria-label="生成短链接">
         <form onSubmit={createLink}>
           <div className="field-group">

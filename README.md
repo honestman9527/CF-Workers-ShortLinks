@@ -27,10 +27,11 @@ pnpm install
 Copy-Item .dev.vars.example .dev.vars
 pnpm cf:typegen
 pnpm db:migrate:local
+pnpm build
 pnpm dev
 ```
 
-打开 `http://127.0.0.1:5173/`。`.dev.vars.example` 使用 Cloudflare 官方测试用 Turnstile 密钥；`LOCAL_ADMIN_BYPASS=true` 只会在请求主机为 `localhost` 或 `127.0.0.1` 时生效，供本地查看 `/admin`。`.dev.vars` 已加入 `.gitignore`。本地测试密钥会显示测试提示，正式部署必须换成真实密钥。
+打开 `http://127.0.0.1:5173/`。`pnpm dev` 使用 Wrangler 提供 Worker 和本地服务，前端资源读取 `dist/client`；首次启动及修改前端后先运行 `pnpm build` 更新资源。`.dev.vars.example` 使用 Cloudflare 官方测试用 Turnstile 密钥；`LOCAL_ADMIN_BYPASS=true` 只会在请求主机为 `localhost` 或 `127.0.0.1` 时生效，供本地查看 `/admin`。`.dev.vars` 已加入 `.gitignore`。本地测试密钥会显示测试提示，正式部署必须换成真实密钥。
 
 运行验证：
 
